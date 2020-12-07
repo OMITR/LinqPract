@@ -234,5 +234,232 @@ namespace dbPract
             _context.Remove(town);
             _context.SaveChanges();
         }
+
+        //Original Code
+        static void TaskOne()
+        {
+            var employees = _context.Employees
+                .Where(e => e.Salary > 48000)
+                .OrderBy(e => e.Salary)
+                .Select(e => new
+                {
+                    e.FirstName,
+                    e.LastName,
+                    e.MiddleName,
+                    e.JobTitle,
+                    e.Salary
+                })
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var e in employees)
+            {
+                sb.AppendLine($"{e.FirstName} {e.LastName} {e.MiddleName} {e.JobTitle} {e.Salary}");
+            }
+
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskTwo()
+        {
+            var employees = _context.Employees
+                .Where(e => e.LastName == "Brown")
+                .ToList();
+
+            var addresses = new Addresses();
+            addresses.AddressText = "8 Mile Rd.";
+            addresses.TownId = 27;
+
+            var sb = new StringBuilder();
+
+            foreach (var e in employees)
+            {
+                e.Address = addresses;
+                sb.AppendLine($"{e.FirstName} {e.LastName} {e.MiddleName} {e.JobTitle} {e.Salary} {e.Address}");
+            }
+
+            _context.SaveChanges();
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskThree()
+        {
+            var startDate = new DateTime(2002, 1, 1);
+            var endDate = new DateTime(2005, 12, 31);
+
+            var result = _context.Employees
+                .Join(_context.EmployeesProjects,
+                e => e.EmployeeId,
+                ep => ep.EmployeeId,
+                (e, ep) => new
+                {
+                    ep.EmployeeId,
+                    ep.ProjectId,
+                    e.FirstName,
+                    e.LastName,
+                    e.MiddleName,
+                    e.Manager
+                })
+                .Join(_context.Projects,
+                e => e.ProjectId,
+                p => p.ProjectId,
+                (e, p) => new
+                {
+                    ProjectName = p.Name,
+                    ProjectStartDate = p.StartDate,
+                    ProjectEndDate = p.EndDate,
+                    e.FirstName,
+                    e.LastName,
+                    e.MiddleName,
+                    e.Manager
+                })
+                .Where(p => p.ProjectStartDate >= startDate && p.ProjectEndDate <= endDate)
+                .Take(5)
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var r in result)
+            {
+                sb.AppendLine(
+                    r.ProjectEndDate == null
+                    ? $"{r.FirstName} {r.LastName} {r.Manager.FirstName} {r.Manager.LastName} {r.ProjectName} {r.ProjectStartDate} НЕ ЗАВЕРШЁН"
+                    : $"{r.FirstName} {r.LastName} {r.Manager.FirstName} {r.Manager.LastName} {r.ProjectName} {r.ProjectStartDate} {r.ProjectEndDate}");
+            }
+
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskFour()
+        {
+            var empId = Convert.ToInt32(Console.ReadLine());
+
+            var employees = _context.Employees
+                .Where(e => e.EmployeeId == empId)
+                .Select(e => new
+                {
+                    e.FirstName,
+                    e.LastName,
+                    e.MiddleName,
+                    e.JobTitle
+                })
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var e in employees)
+            {
+                sb.AppendLine($"{e.FirstName} {e.LastName} {e.MiddleName} - {e.JobTitle}");
+            }
+
+            Console.WriteLine(sb.ToString().TrimEnd());
+            GetProjectsById(empId);
+        }
+
+        static void GetProjectsById(int empId)
+        {
+            var projId = _context.EmployeesProjects
+                .Where(ep => ep.EmployeeId == empId)
+                .Select(ep => new
+                {
+                    ep.ProjectId
+                })
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            for (var i = 0; i < projId.Count; i++)
+            {
+                var projects = _context.Projects
+                    .Where(p => p.ProjectId == projId
+                    .ElementAt(i)
+                    .ProjectId)
+                    .Select(p => new
+                    {
+                        p.Name
+                    })
+                    .ToList();
+
+                foreach (var p in projects)
+                {
+                    sb.AppendLine($"{p.Name}");
+                }
+            }
+
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskFive()
+        {
+            var departments = _context.Departments
+                .Where(d => d.Employees.Count() < 5)
+                .Select(d => new
+                {
+                    d.Name,
+                })
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var d in departments)
+            {
+                sb.AppendLine($"{d.Name}");
+            }
+
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskSix()
+        {
+            var depName = Console.ReadLine();
+            Decimal per = Convert.ToDecimal(Console.ReadLine());
+
+            var department = _context.Departments
+                .Where(d => d.Name == depName)
+                .Select(d => new
+                {
+                    d.Name,
+                    d.Employees
+                });
+
+            var employees = _context.Employees
+                .Where(e => e.Department.Name == depName)
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var e in employees)
+            {
+                Decimal updSalary = e.Salary;
+                e.Salary = updSalary + updSalary * per / 100;
+
+                sb.AppendLine($"{e.FirstName} {e.LastName} {e.Salary}");
+            }
+
+            _context.SaveChanges();
+            Console.WriteLine(sb.ToString().TrimEnd());
+        }
+
+        static void TaskEight()
+        {
+            string townName = Console.ReadLine();
+
+            Towns town = _context.Towns
+                .FirstOrDefault(t => t.Name == townName);
+
+            var addresses = _context.Addresses
+                .Where(a => a.Town.Name == townName)
+                .ToList();
+
+            foreach (var a in addresses)
+            {
+                a.TownId = null;
+            }
+
+            _context.Remove(town);
+            _context.SaveChanges();
+        }
     }
+}
 }
